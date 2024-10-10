@@ -33,10 +33,9 @@ def group_contexts_by_doc(contexts: List[dict]) -> Dict[str, Dict]:
     grouped_contexts = defaultdict(lambda: {"doc_details": None, "contexts": []})
 
     for context in contexts:
-        doc_id = context["doc"]["doc_id"]
         doc_key = context["doc"]["key"]
 
-        # If doc_details are not set for this doc_id, assign them
+        # If doc_details are not set for this doc_key, assign them
         if grouped_contexts[doc_key]["doc_details"] is None:
             grouped_contexts[doc_key]["doc_details"] = context["doc"]
 
@@ -49,7 +48,10 @@ def group_contexts_by_doc(contexts: List[dict]) -> Dict[str, Dict]:
             },
         )
 
-    return dict(grouped_contexts)
+    res = {}
+    for doc_key, items in dict(grouped_contexts).items():
+        res[doc_key] = items["doc_details"]
+    return res
 
 
 def _flatten_pqa_answer(answer: Answer) -> dict:
@@ -63,10 +65,33 @@ def _flatten_pqa_answer(answer: Answer) -> dict:
             doc=context.text.doc.model_dump(),
         )
         contexts.append(dct)
-    res["contexts"] = contexts
-    res.pop("context", None)
+    res["documents"] = group_contexts_by_doc(contexts)
+    res.pop("contexts", [])
     res.pop("id", None)
     return res
+
+
+def _compress_dict(data_dict: dict):
+    compressed_dict = {
+        "question": data_dict.get("question"),
+        "answer": data_dict.get("answer"),
+        "documents": {},
+    }
+
+    # filter out documents, keeping only 'context' and 'citation'
+    if "documents" in data_dict:
+        for doc_key, doc_data in data_dict["documents"].items():
+            compressed_dict["documents"][doc_key] = {
+                "context": data_dict.get("context"),
+                "citation": doc_data.get("citation"),
+            }
+
+    return compressed_dict
+
+
+def minify_summary(summary: List[dict]) -> List[dict]:
+    res = map(_compress_dict, summary)
+    return list(res)
 
 
 def generate_summary(
@@ -75,6 +100,8 @@ def generate_summary(
     client,
     model,
     paper_qa_obj,
+    compress_summary: bool = True,
+    auto_save: bool = True,
     debug: bool = False,
 ) -> List[dict]:
     res = []
@@ -90,7 +117,6 @@ def generate_summary(
     unwanted_keys = ["formatted_answer", "config_md5"]
     for idx, idea in tqdm(enumerate(ideas)):
         answer = _flatten_pqa_answer(paper_qa_obj.query(idea))
-        answer["documents"] = group_contexts_by_doc(answer.pop("contexts", []))
         for _uk in unwanted_keys:
             answer.pop(_uk, None)
         logger.info(f"Idea = {idea} | answer={answer['answer']}")
@@ -101,11 +127,14 @@ def generate_summary(
             logger.debug(
                 f"Currently cost at {round(total_cost, 3)} and {token_counts} tokens.",
             )
-
-    summary_path = osp.join(base_dir, "summary.json")
-    logger.info(f"Dumping summary to {summary_path}")
-    with open(summary_path, "w") as f:
-        json.dump(res, f, indent=4, cls=CustomJSONEncoder)
+    logger.debug(f"summary json compression = {compress_summary}")
+    if compress_summary:
+        res = minify_summary(res)
+    if auto_save:
+        summary_path = osp.join(base_dir, "summary.json")
+        logger.info(f"Dumping summary to {summary_path}")
+        with open(summary_path, "w") as f:
+            json.dump(res, f, indent=4, cls=CustomJSONEncoder)
     logger.info(
         f"Total cost :: {round(total_cost, 3)} | Token Counts :: {token_counts}",
     )

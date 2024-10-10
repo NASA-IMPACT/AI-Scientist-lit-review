@@ -54,7 +54,7 @@ def parse_arguments():
         default="claude-3-5-sonnet-20240620",
         choices=[
             "claude-3-5-sonnet-20240620",
-            "gpt-4o-2024-05-13",
+            "gpt-4o-2024-08-06",
             "deepseek-coder-v2-0724",
             "llama3.1-405b",
             # Anthropic Claude models via Amazon Bedrock
@@ -99,6 +99,11 @@ def parse_arguments():
         type=int,
         default=50,
         help="Number of ideas to generate",
+    )
+    parser.add_argument(
+        "--compress-summary",
+        action="store_true",
+        help="Compress and minify the generated summary",
     )
     return parser.parse_args()
 
@@ -345,11 +350,11 @@ if __name__ == "__main__":
 
         print(f"Using Vertex AI with model {client_model}.")
         client = anthropic.AnthropicVertex()
-    elif args.model == "gpt-4o-2024-05-13":
+    elif args.model == "gpt-4o-2024-08-06":
         import openai
 
         print(f"Using OpenAI API with model {args.model}.")
-        client_model = "gpt-4o-2024-05-13"
+        client_model = "gpt-4o-2024-08-06"
         client = openai.OpenAI()
     elif args.model == "deepseek-coder-v2-0724":
         import openai
