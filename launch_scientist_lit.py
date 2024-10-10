@@ -21,6 +21,7 @@ from ai_scientist.generate_ideas_2 import build_paperqa_index, generate_summary
 from ai_scientist.perform_experiments import perform_experiments
 from ai_scientist.perform_review import load_paper, perform_improvement, perform_review
 from ai_scientist.perform_writeup import generate_latex, perform_writeup
+from ai_scientist.perform_writeup_2 import compile_latex, generate_latex
 
 NUM_REFLECTIONS = 3
 
@@ -104,6 +105,24 @@ def parse_arguments():
         "--compress-summary",
         action="store_true",
         help="Compress and minify the generated summary",
+    )
+    parser.add_argument(
+        "--summary-file",
+        type=str,
+        default="summary.json",
+        help="Specify the filename to save the summary. Defaults to 'summary.json'.",
+    )
+    parser.add_argument(
+        "--latex-file",
+        type=str,
+        default="summary.tex",
+        help="Specify the filename to save the generated latex. Defaults to 'summary.tex'.",
+    )
+    parser.add_argument(
+        "--pdf-file",
+        type=str,
+        default="summary.pdf",
+        help="Specify the filename to save the generated pdf. Defaults to 'summary.pdf'.",
     )
     return parser.parse_args()
 
@@ -380,6 +399,9 @@ if __name__ == "__main__":
     base_dir = osp.join("templates", args.experiment)
     results_dir = osp.join("results", args.experiment)
     paper_paths = glob.glob(osp.join(base_dir, "papers", "*.pdf"))
+    summary_file = args.summary_file
+    latex_file = args.latex_file
+    pdf_file = args.pdf_file
 
     ideas = []
     with open(osp.join(base_dir, "ideas.json")) as f:
@@ -392,6 +414,16 @@ if __name__ == "__main__":
         client=client,
         model=client_model,
         paper_qa_obj=pqa_docs,
+        summary_file=summary_file,
         debug=True,
     )
     # pprint.pprint(summary)
+
+    latex_resp = generate_latex(
+        base_dir=base_dir,
+        client=client,
+        model=client_model,
+        summary=summary,
+        save_path=latex_file,
+    )
+    compile_latex(base_dir=base_dir, latex_file=latex_file, pdf_output=pdf_file)

@@ -102,6 +102,7 @@ def generate_summary(
     paper_qa_obj,
     compress_summary: bool = True,
     auto_save: bool = True,
+    summary_file: str = "summary.json",
     debug: bool = False,
 ) -> List[dict]:
     res = []
@@ -131,7 +132,7 @@ def generate_summary(
     if compress_summary:
         res = minify_summary(res)
     if auto_save:
-        summary_path = osp.join(base_dir, "summary.json")
+        summary_path = osp.join(base_dir, summary_file)
         logger.info(f"Dumping summary to {summary_path}")
         with open(summary_path, "w") as f:
             json.dump(res, f, indent=4, cls=CustomJSONEncoder)

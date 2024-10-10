@@ -11,6 +11,8 @@ PROMPT_SYSTEM = """
 Generate latex code for the research literature survey/summary result based on the latex template provided.
 Only output a complete latex code, no other text.
 In the paper, come up with best title based on the questions in the summary.
+You are free to augment the section structure of the latex as well.
+Be creative in writing, but adhere to the context and scientific review.
 """
 
 PROMPT_GENERATION = """
@@ -37,7 +39,7 @@ def generate_latex(
     prompt_system: Optional[str] = None,
     save_path: str = "summary.tex",
 ) -> str:
-    template_path = os.path.join(base_dir, "latex", "ieeetrans.tex")
+    template_path = os.path.join(base_dir, "latex", "template.tex")
     template = ""
     with open(template_path) as f:
         template = f.read()
@@ -84,11 +86,14 @@ def compile_latex(
     latex_dir = os.path.join(base_dir, "latex")
     latex_path = os.path.join(latex_dir, latex_file)
 
+    # Directory to store the output (same as the LaTeX directory for now)
+    output_dir = os.path.join(latex_dir, "output")
+
+    output_dir = os.path.abspath(output_dir)
+    latex_path = os.path.abspath(latex_path)
+
     logger.debug(latex_dir)
     logger.debug(latex_path)
-
-    # Directory to store the output (same as the LaTeX directory for now)
-    output_dir = latex_dir
 
     # Commands to run to generate the PDF and specify the output directory
     commands = [
@@ -96,9 +101,14 @@ def compile_latex(
             "pdflatex",
             "-interaction=nonstopmode",
             f"-output-directory={output_dir}",
-            latex_file,
+            latex_path,
         ],
-        # ["pdflatex", "-interaction=nonstopmode", f"-output-directory={output_dir}", latex_path],
+        [
+            "pdflatex",
+            "-interaction=nonstopmode",
+            f"-output-directory={output_dir}",
+            latex_path,
+        ],
     ]
 
     logger.debug(commands)
