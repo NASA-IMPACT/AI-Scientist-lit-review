@@ -119,6 +119,12 @@ def parse_arguments():
         help="Specify the filename to save the generated latex. Defaults to 'summary.tex'.",
     )
     parser.add_argument(
+        "--latex-template",
+        type=str,
+        default="template.tex",
+        help="Specify the filename to save the generated latex. Defaults to 'summary.tex'.",
+    )
+    parser.add_argument(
         "--pdf-file",
         type=str,
         default="summary.pdf",
@@ -401,6 +407,7 @@ if __name__ == "__main__":
     paper_paths = glob.glob(osp.join(base_dir, "papers", "*.pdf"))
     summary_file = args.summary_file
     latex_file = args.latex_file
+    latex_template = args.latex_template
     pdf_file = args.pdf_file
 
     ideas = []
@@ -424,6 +431,7 @@ if __name__ == "__main__":
         client=client,
         model=client_model,
         summary=summary,
+        template_file=latex_template,
         save_path=latex_file,
     )
     compile_latex(base_dir=base_dir, latex_file=latex_file, pdf_output=pdf_file)

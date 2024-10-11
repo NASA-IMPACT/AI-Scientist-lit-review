@@ -1,7 +1,8 @@
 [
-    "What are the unique aspects of each model mentioned?",
-    "What are the datasets used in each of the papers to train the models?",
-    "What are the evaluation done for each model?",
-    "What is the most strong aspect of indus?",
-    "What are the gaps presented in each paper, and their intersection?"
+    "What datasets and benchmarks have been specifically developed for evaluating NLP models in scientific domains?",
+    "How are domain-specific language models fine-tuned and evaluated for tasks in scientific literature and what metrics are used to measure their effectiveness?",
+    "What are the key challenges in creating domain-focused corpora for specialized tasks in scientific literature?",
+    "What methods are most effective in fine-tuning pre-trained language models for scientific tasks?",
+    "Explain the gaps presented in each paper, and their commonalities.",
+    "How does INDUS compare to the other models, and what are the salient features of the models?"
 ]

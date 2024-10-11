@@ -8,25 +8,29 @@ from loguru import logger
 from ai_scientist.llm import extract_json_between_markers, get_response_from_llm
 
 PROMPT_SYSTEM = """
-Generate latex code for the research literature survey/summary result based on the latex template provided.
-Only output a complete latex code, no other text.
-In the paper, come up with best title based on the questions in the summary.
-You are free to augment the section structure of the latex as well.
-Be creative in writing, but adhere to the context and scientific review.
+You will be provided a literature research survey JSON with questions, answers and contexts. Generate latex code for the research result based on the latex template provided.
+Only output a complete latex code, no other text. Be as detailed as you can!
+- Reuse the inline citations (using \cite{}) present in the `answer` section and use it within any paragraphs in the latex sections.
+- Come up with best title based on the questions in the JSON.
+- You are free to augment the section structure of the latex as well.
+- Strictly adhere to the answer and context in the JSON.
+- Make full use of all the answers and the contexts in the JSON.
+
+Be as much detailed as possible!
 """
 
 PROMPT_GENERATION = """
-<summary>
+<literature__json>
 ```
 {summary}
 ```
-</summary>
+</literature_json>
 
-<template>
+<template_latex>
 ```
 {tex_template}
 ```
-</template>
+</template_latex>
 """
 
 
@@ -37,9 +41,10 @@ def generate_latex(
     summary: List[Dict],
     prompt_generation: Optional[str] = None,
     prompt_system: Optional[str] = None,
+    template_file: str = "template.tex",
     save_path: str = "summary.tex",
 ) -> str:
-    template_path = os.path.join(base_dir, "latex", "template.tex")
+    template_path = os.path.join(base_dir, "latex", template_file)
     template = ""
     with open(template_path) as f:
         template = f.read()
@@ -58,7 +63,7 @@ def generate_latex(
     )
 
     response = response.strip("`")
-    save_path = os.path.join(base_dir, "latex", save_path or "summary.tex")
+    save_path = os.path.join(base_dir, "latex", "output/", save_path or "summary.tex")
     logger.info(f"Saving latex code to {save_path}")
     with open(save_path, "w") as f:
         f.write(response)
@@ -83,68 +88,78 @@ def compile_latex(
     Returns:
         bool: True if PDF is successfully generated, False otherwise.
     """
-    latex_dir = os.path.join(base_dir, "latex")
-    latex_path = os.path.join(latex_dir, latex_file)
 
-    # Directory to store the output (same as the LaTeX directory for now)
-    output_dir = os.path.join(latex_dir, "output")
+    def _compile(
+        latex_file,
+        pdf_output,
+    ):
+        latex_dir = os.path.join(base_dir, "latex")
+        latex_path = os.path.join(latex_dir, "output", latex_file)
 
-    output_dir = os.path.abspath(output_dir)
-    latex_path = os.path.abspath(latex_path)
+        logger.info(f"Compiling latex | {latex_path}")
 
-    logger.debug(latex_dir)
-    logger.debug(latex_path)
+        # Directory to store the output (same as the LaTeX directory for now)
+        output_dir = os.path.join(latex_dir, "output")
 
-    # Commands to run to generate the PDF and specify the output directory
-    commands = [
-        [
-            "pdflatex",
-            "-interaction=nonstopmode",
-            f"-output-directory={output_dir}",
-            latex_path,
-        ],
-        [
-            "pdflatex",
-            "-interaction=nonstopmode",
-            f"-output-directory={output_dir}",
-            latex_path,
-        ],
-    ]
+        output_dir = os.path.abspath(output_dir)
+        latex_path = os.path.abspath(latex_path)
 
-    logger.debug(commands)
+        logger.debug(latex_dir)
+        logger.debug(latex_path)
 
-    try:
-        # Run each command sequentially in the LaTeX file's directory
-        for command in commands:
-            result = subprocess.run(
-                command,
-                cwd=latex_dir,  # Ensure it runs in the LaTeX directory
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                timeout=timeout,
-            )
-            print("Running command:", " ".join(command))
-            print("Output:\n", result.stdout)
-            print("Errors:\n", result.stderr)
+        # Commands to run to generate the PDF and specify the output directory
+        commands = [
+            [
+                "pdflatex",
+                "-interaction=nonstopmode",
+                f"-output-directory={output_dir}",
+                latex_path,
+            ],
+            [
+                "pdflatex",
+                "-interaction=nonstopmode",
+                f"-output-directory={output_dir}",
+                latex_path,
+            ],
+        ]
 
-            if result.returncode != 0:
-                print(f"Error running command {' '.join(command)}.")
-                return False
+        logger.debug(commands)
 
-        # Move the generated PDF to the desired location
-        generated_pdf = os.path.join(output_dir, latex_file.replace(".tex", ".pdf"))
-        shutil.move(generated_pdf, pdf_output)
-        print(f"PDF generated successfully at {pdf_output}")
-        return True
+        try:
+            # Run each command sequentially in the LaTeX file's directory
+            for command in commands:
+                result = subprocess.run(
+                    command,
+                    cwd=latex_dir,  # Ensure it runs in the LaTeX directory
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=timeout,
+                )
+                print("Running command:", " ".join(command))
+                print("Output:\n", result.stdout)
+                print("Errors:\n", result.stderr)
 
-    except subprocess.TimeoutExpired:
-        print(f"Command {' '.join(command)} timed out after {timeout} seconds")
-    except subprocess.CalledProcessError as e:
-        print(f"Error running command: {e}")
-    except FileNotFoundError:
-        print("PDF file not found.")
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+                if result.returncode != 0:
+                    print(f"Error running command {' '.join(command)}.")
+                    return False
 
-    return False
+            # Move the generated PDF to the desired location
+            generated_pdf = os.path.join(output_dir, latex_file.replace(".tex", ".pdf"))
+            shutil.move(generated_pdf, pdf_output)
+            print(f"PDF generated successfully at {pdf_output}")
+            return True
+
+        except subprocess.TimeoutExpired:
+            print(f"Command {' '.join(command)} timed out after {timeout} seconds")
+        except subprocess.CalledProcessError as e:
+            print(f"Error running command: {e}")
+        except FileNotFoundError:
+            print("PDF file not found.")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
+        return False
+
+    _ = _compile(latex_file, pdf_output)
+    return _compile(latex_file, pdf_output)

@@ -117,10 +117,11 @@ def generate_summary(
 
     unwanted_keys = ["formatted_answer", "config_md5"]
     for idx, idea in tqdm(enumerate(ideas)):
+        logger.info(f"Idea [{idx+1}/{len(ideas)}] | {idea}")
         answer = _flatten_pqa_answer(paper_qa_obj.query(idea))
         for _uk in unwanted_keys:
             answer.pop(_uk, None)
-        logger.info(f"Idea = {idea} | answer={answer['answer']}")
+        logger.info(f"Idea[{idx+1}/{len(ideas)}] | {idea} | answer={answer['answer']}")
         res.append(answer)
         total_cost += answer["cost"]
         token_counts += np.sum(list(answer["token_counts"].values()))
