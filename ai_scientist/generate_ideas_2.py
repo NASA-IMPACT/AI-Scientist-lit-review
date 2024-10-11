@@ -103,6 +103,7 @@ def generate_summary(
     compress_summary: bool = True,
     auto_save: bool = True,
     summary_file: str = "summary.json",
+    skip_generation: bool = False,
     debug: bool = False,
 ) -> List[dict]:
     res = []
@@ -115,6 +116,21 @@ def generate_summary(
         with open(osp.join(base_dir, "ideas.json")) as f:
             ideas = json.load(f)
 
+    if skip_generation:
+        spath = osp.join(base_dir, "summary.json")
+        logger.info(f"Skipping generation and loading from {spath}")
+        try:
+            with open(osp.join(base_dir, "summary.json")) as f:
+                res = json.load(f)
+        except:
+            logger.warning("Can't skip the generation. Failed to load json!")
+            res = []
+
+    # early check and return
+    if res:
+        return res
+
+    # Or else generate
     unwanted_keys = ["formatted_answer", "config_md5"]
     for idx, idea in tqdm(enumerate(ideas)):
         logger.info(f"Idea [{idx+1}/{len(ideas)}] | {idea}")

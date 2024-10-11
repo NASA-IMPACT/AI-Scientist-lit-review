@@ -43,11 +43,18 @@ def generate_latex(
     prompt_system: Optional[str] = None,
     template_file: str = "template.tex",
     save_path: str = "summary.tex",
+    skip_generation: bool = False,
 ) -> str:
     template_path = os.path.join(base_dir, "latex", template_file)
     template = ""
     with open(template_path) as f:
         template = f.read()
+
+    latex_text = None
+    save_path = os.path.join(base_dir, "latex", "output/", save_path or "summary.tex")
+    if skip_generation:
+        with open(save_path) as f:
+            latex_text = f.read()
 
     prompt_generation = (
         (prompt_generation or PROMPT_GENERATION)
@@ -55,19 +62,19 @@ def generate_latex(
         .strip()
     )
     prompt_system = prompt_system or PROMPT_SYSTEM
-    response, history = get_response_from_llm(
-        prompt_generation,
-        client,
-        model,
-        prompt_system,
-    )
 
-    response = response.strip("`")
-    save_path = os.path.join(base_dir, "latex", "output/", save_path or "summary.tex")
-    logger.info(f"Saving latex code to {save_path}")
-    with open(save_path, "w") as f:
-        f.write(response)
-    return response
+    if not latex_text:
+        latex_text, history = get_response_from_llm(
+            prompt_generation,
+            client,
+            model,
+            prompt_system,
+        )
+        latex_text = latex_text.strip("`")
+        logger.info(f"Saving latex code to {save_path}")
+        with open(save_path, "w") as f:
+            f.write(latex_text)
+    return latex_text
 
 
 def compile_latex(

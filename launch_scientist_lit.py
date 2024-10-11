@@ -15,6 +15,7 @@ import torch
 from aider.coders import Coder
 from aider.io import InputOutput
 from aider.models import Model
+from loguru import logger
 
 from ai_scientist.generate_ideas import check_idea_novelty, generate_ideas
 from ai_scientist.generate_ideas_2 import build_paperqa_index, generate_summary
@@ -100,6 +101,16 @@ def parse_arguments():
         type=int,
         default=50,
         help="Number of ideas to generate",
+    )
+    parser.add_argument(
+        "--skip-summary-generation",
+        action="store_true",
+        help="Skip summary generation and load existing one",
+    )
+    parser.add_argument(
+        "--skip-latex-generation",
+        action="store_true",
+        help="Skip latex generation and load existing one",
     )
     parser.add_argument(
         "--compress-summary",
@@ -409,6 +420,11 @@ if __name__ == "__main__":
     latex_file = args.latex_file
     latex_template = args.latex_template
     pdf_file = args.pdf_file
+    skip_summary_generation = args.skip_summary_generation
+    skip_latex_generation = args.skip_summary_generation
+
+    logger.debug(f"skip_summary_generation = {skip_summary_generation}")
+    logger.debug(f"skip_latex_generation = {skip_latex_generation}")
 
     ideas = []
     with open(osp.join(base_dir, "ideas.json")) as f:
@@ -422,9 +438,9 @@ if __name__ == "__main__":
         model=client_model,
         paper_qa_obj=pqa_docs,
         summary_file=summary_file,
+        skip_generation=skip_summary_generation,
         debug=True,
     )
-    # pprint.pprint(summary)
 
     latex_resp = generate_latex(
         base_dir=base_dir,
@@ -433,5 +449,6 @@ if __name__ == "__main__":
         summary=summary,
         template_file=latex_template,
         save_path=latex_file,
+        skip_generation=skip_latex_generation,
     )
     compile_latex(base_dir=base_dir, latex_file=latex_file, pdf_output=pdf_file)
